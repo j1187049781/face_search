@@ -1,0 +1,2 @@
+import dlib
+dlib.face_recognition_model_v1
