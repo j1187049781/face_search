@@ -35,14 +35,15 @@ class Similarity:
 
     def add_person(self,image_fp:Union[str,io.BufferedReader],duplicate_person=False)->Tuple[bool,str]:
         if duplicate_person:
-            id,sim=self.find_person(image_fp)
-            if sim>self.SIM_T:
-                return False,id
-        id = binascii.b2a_hex(os.urandom(15)).decode()
+            find_res=self.find_person(image_fp)
+            if find_res:
+                person_id, sim=find_res
+                return False,person_id
+        person_id = binascii.b2a_hex(os.urandom(15)).decode()
         embedding = get_embedding(image_fp)
-        self.shelf[id]=embedding
-        self.cache_info_dict[id]=embedding
-        return True,id
+        self.shelf[person_id]=embedding
+        self.cache_info_dict[person_id]=embedding
+        return True,person_id
 
 
     def rm_person(self,person_id:str)->bool:
@@ -71,7 +72,7 @@ class Similarity:
         embeddings=list(self.cache_info_dict.values())+embeddings
 
         face_embeddings_tensor=[torch.tensor(arr) for arr in embeddings]
-        if face_embeddings_tensor :
+        if not face_embeddings_tensor :
             return None
 
         embeddings_tensor = torch.cat([torch.tensor(arr) for arr in embeddings], dim=0)
@@ -79,7 +80,7 @@ class Similarity:
         max_sim_index_tensor=torch.argmax(cos_sim_tensor)
         max_sim_tensor=cos_sim_tensor[max_sim_index_tensor]
         person_id,face_sim=ids[max_sim_index_tensor.numpy()],float(max_sim_tensor.numpy())
-        return person_id,face_sim
+        return (person_id,face_sim) if face_sim> self.SIM_T else None
 
 if __name__ == '__main__':
     data_dir='ffhq'
